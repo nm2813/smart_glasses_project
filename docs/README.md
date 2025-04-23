@@ -10,18 +10,14 @@ smart_glasses_project/
 │ ├── detection_yolo_audio.py 
 │ ├── camera_setup.py 
 │ └── utils.py 
-
 ├── models/ # YOLOv8 model weights 
 │ └── yolov8n.pt 
-
 ├── hardware_integration/ # Wiring diagrams & Pi config 
 │ ├── wiring_diagrams/ 
 │ └── raspberry_pi_config/
-
 ├── docs/ # Documentation 
 │ ├── README.md 
 │ └── setup_guide.md 
-
 └── tests/ # Test results 
     └── test_results.md
 

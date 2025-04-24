@@ -1,6 +1,7 @@
 import cv2
 import pyttsx3
 from ultralytics import YOLO
+from utils import get_distance, cleanup_gpio
 
 # Initialize TTS engine
 engine = pyttsx3.init()
@@ -32,37 +33,43 @@ def main():
         print("Error: Could not open webcam.")
         return
 
-    last_spoken = ""  # Avoid repeating same object
+    last_spoken = ""
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
 
-        results = model(frame, verbose=False)[0]
-        annotated_frame = results.plot()
-        frame_width = frame.shape[1]
+            results = model(frame, verbose=False)[0]
+            annotated_frame = results.plot()
+            frame_width = frame.shape[1]
 
-        if results.boxes:
-            for box in results.boxes:
-                cls_id = int(box.cls[0])
-                class_name = results.names[cls_id]
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                distance = estimate_distance((x1, y1, x2, y2), frame_width)
-                description = f"{class_name} {distance}"
+            if results.boxes:
+                for box in results.boxes:
+                    cls_id = int(box.cls[0])
+                    class_name = results.names[cls_id]
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    distance = estimate_distance((x1, y1, x2, y2), frame_width)
+                    dist_feedback = get_distance()
 
-                if description != last_spoken:
-                    speak(description)
-                    last_spoken = description
-                    break  # Only speak one object per frame to avoid overlap
+                    # Say object + distance estimate + actual ultrasonic distance
+                    description = f"{class_name} {distance}, {dist_feedback} cm"
 
-        cv2.imshow("YOLOv8 Detection", annotated_frame)
+                    if description != last_spoken:
+                        speak(description)
+                        last_spoken = description
+                        break
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            cv2.imshow("YOLOv8 Detection", annotated_frame)
 
-    cap.release()
-    cv2.destroyAllWindows()
+            key = cv2.waitKey(1)
+            if key == ord('q') or key == 27:
+                break
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
+        cleanup_gpio()
 
 if __name__ == '__main__':
     main()

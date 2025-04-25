@@ -1,23 +1,23 @@
 import cv2
 import pyttsx3
+import threading
 from ultralytics import YOLO
 from utils import get_distance, cleanup_gpio
 
-# Initialize TTS engine
+# Text-to-speech init
 engine = pyttsx3.init()
-engine.setProperty('rate', 150)  # Speech speed
+engine.setProperty('rate', 150)
 
-# Speak text
-def speak(text):
-    engine.say(text)
-    engine.runAndWait()
+def speak_async(text):
+    def run():
+        engine.say(text)
+        engine.runAndWait()
+    threading.Thread(target=run, daemon=True).start()
 
-# Estimate distance based on box size (simplified)
 def estimate_distance(bbox, frame_width):
-    x1, y1, x2, y2 = bbox
+    x1, _, x2, _ = bbox
     box_width = x2 - x1
     rel_size = box_width / frame_width
-
     if rel_size > 0.5:
         return "very close"
     elif rel_size > 0.3:
@@ -26,14 +26,18 @@ def estimate_distance(bbox, frame_width):
         return "far"
 
 def main():
-    model = YOLO('yolov8n.pt')
-    cap = cv2.VideoCapture(0)
+    pretrained_model = YOLO('yolov8n.pt')
+    custom_model = YOLO('best.pt')
 
+    cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        print("Error: Could not open webcam.")
+        print("Failed to open camera.")
         return
 
-    last_spoken = ""
+    cv2.namedWindow("Camera", cv2.WINDOW_NORMAL)
+    frame_count = 0
+
+    last_seen = {}  # {class_name: last_distance_category}
 
     try:
         while True:
@@ -41,35 +45,40 @@ def main():
             if not ret:
                 break
 
-            results = model(frame, verbose=False)[0]
-            annotated_frame = results.plot()
             frame_width = frame.shape[1]
+            model = pretrained_model if frame_count % 2 == 0 else custom_model
+            results = model(frame, verbose=False)[0]
 
             if results.boxes:
                 for box in results.boxes:
                     cls_id = int(box.cls[0])
                     class_name = results.names[cls_id]
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    distance = estimate_distance((x1, y1, x2, y2), frame_width)
-                    dist_feedback = get_distance()
+                    distance_category = estimate_distance((x1, y1, x2, y2), frame_width)
+                    real_distance = get_distance()
+                    desc = f"{class_name}, {distance_category}, {real_distance} cm"
 
-                    # Say object + distance estimate + actual ultrasonic distance
-                    description = f"{class_name} {distance}, {dist_feedback} cm"
+                    # Speak only if distance category has changed for same object
+                    if last_seen.get(class_name) != distance_category:
+                        speak_async(desc)
+                        last_seen[class_name] = distance_category
 
-                    if description != last_spoken:
-                        speak(description)
-                        last_spoken = description
-                        break
+                    # Draw
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
+                    cv2.putText(frame, desc, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
+                    
+            frame_count += 1
+            cv2.imshow("Camera", frame)
 
-            cv2.imshow("YOLOv8 Detection", annotated_frame)
-
-            key = cv2.waitKey(1)
-            if key == ord('q') or key == 27:
+            key = cv2.waitKey(1) & 0xFF
+            if key in [ord('q'), 27]:
+                print("Exiting...")
                 break
+
     finally:
         cap.release()
-        cv2.destroyAllWindows()
         cleanup_gpio()
+        cv2.destroyAllWindows()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

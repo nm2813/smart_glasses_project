@@ -1,23 +1,24 @@
 import RPi.GPIO as GPIO
 import time
 
-# Set GPIO Mode
+# Set up GPIO pins for HC-SR04
+TRIG = 23  # GPIO pin for Trigger
+ECHO = 24  # GPIO pin for Echo
+
+# Set GPIO mode
 GPIO.setmode(GPIO.BCM)
-
-# Define GPIO pins for HC-SR04
-TRIG = 23
-ECHO = 24
-
-# Set up GPIO pins
 GPIO.setup(TRIG, GPIO.OUT)
 GPIO.setup(ECHO, GPIO.IN)
 
 def get_distance():
     """
-    Returns the measured distance from the ultrasonic sensor in cm.
+    Returns the distance measured by the ultrasonic sensor in cm.
     """
+    GPIO.output(TRIG, False)
+    time.sleep(2)  # Wait for sensor to settle
+
     GPIO.output(TRIG, True)
-    time.sleep(0.00001)
+    time.sleep(0.00001)  # Send a pulse
     GPIO.output(TRIG, False)
 
     pulse_start = time.time()
@@ -29,11 +30,11 @@ def get_distance():
         pulse_end = time.time()
 
     pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150  # Speed of sound formula
+    distance = pulse_duration * 17150  # Speed of sound in cm
     return round(distance, 2)
 
 def cleanup_gpio():
     """
-    Cleanup GPIO settings.
+    Cleans up GPIO settings after use.
     """
     GPIO.cleanup()

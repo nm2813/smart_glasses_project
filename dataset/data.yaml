@@ -1,0 +1,13 @@
+train: C:/Users/PVLap/Desktop/smart_glasses_project/dataset/train/images
+val: C:/Users/PVLap/Desktop/smart_glasses_project/dataset/valid/images
+test: C:/Users/PVLap/Desktop/smart_glasses_project/dataset/test/images
+
+nc: 5
+names: ['gun', 'hand', 'money', 'specticles', 'watch']
+
+roboflow:
+  workspace: smart-glasses-objects
+  project: smartglassesobjects
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/smart-glasses-objects/smartglassesobjects/dataset/1

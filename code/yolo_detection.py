@@ -26,6 +26,7 @@ def estimate_distance(bbox, frame_width):
         return "far"
 
 def main():
+    print("Initializing YOLO model...")
     model = YOLO('yolov8n.pt')
     
     # Use CSI camera via V4L2 driver
@@ -34,20 +35,28 @@ def main():
     if not cap.isOpened():
         print("Failed to open camera.")
         return
+    else:
+        print("Camera initialized successfully.")
+
+    cv2.namedWindow("Laptop Camera Feed", cv2.WINDOW_NORMAL)
 
     frame_count = 0
     last_seen = {}
+    
 
     try:
         while True:
             ret, frame = cap.read()
             if not ret:
+                print("Failed to read frame from camera.")
                 break
 
             frame_width = frame.shape[1]
+            print("Processing frame...")
             results = model(frame, verbose=False)[0]
 
             if results.boxes:
+                print(f"Detected {len(results.boxes)} objects.")
                 for box in results.boxes:
                     cls_id = int(box.cls[0])
                     class_name = results.names[cls_id]

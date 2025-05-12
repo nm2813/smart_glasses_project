@@ -27,9 +27,10 @@ def estimate_distance(bbox, frame_width):
 
 def main():
     model = YOLO('yolov8n.pt')
-
+    
     # Use CSI camera via V4L2 driver
     cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+
     if not cap.isOpened():
         print("Failed to open camera.")
         return
@@ -57,12 +58,25 @@ def main():
 
                     if last_seen.get(class_name) != distance_category:
                         speak_async(desc)
-                        last_seen[class_name] = distance_category
+                    
+                    last_seen[class_name] = distance_category
+
+                    # Draw bounding box and text on the frame
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(frame, desc, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+            # Show the camera feed
+            cv2.imshow("Raspberry Pi Camera Feed", frame)
+
+            # Exit on 'q' key press
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
             frame_count += 1
 
     finally:
         cap.release()
+        cv2.destroyAllWindows()
         cleanup_gpio()
 
 if __name__ == "__main__":

@@ -26,14 +26,15 @@ def estimate_distance(bbox, frame_width):
         return "far"
 
 def main():
-    model = YOLO('yolov8n.pt')  # Pretrained model only
+    model = YOLO('yolov8n.pt')
 
-    cap = cv2.VideoCapture(0)
+    # Use CSI camera via V4L2 driver
+    cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
     if not cap.isOpened():
         print("Failed to open camera.")
         return
 
-    cv2.namedWindow("Camera", cv2.WINDOW_NORMAL)
+    frame_count = 0
     last_seen = {}
 
     try:
@@ -58,19 +59,11 @@ def main():
                         speak_async(desc)
                         last_seen[class_name] = distance_category
 
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    cv2.putText(frame, desc, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-
-            cv2.imshow("Camera", frame)
-            key = cv2.waitKey(1) & 0xFF
-            if key in [ord('q'), 27]:
-                print("Exiting...")
-                break
+            frame_count += 1
 
     finally:
         cap.release()
         cleanup_gpio()
-        cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
